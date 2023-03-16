@@ -4,7 +4,7 @@ bizip is a command-line tool that allows users to unzip and combine zip files th
 
 # Installation
 
-You can download the latest release of bizip from the [releases]() section. Alternatively, you can install it from the source by running the following command in your terminal: 
+You can download the latest release of bizip from the [releases](https://github.com/binalyze/bizip/releases) section. Alternatively, you can install it from the source by running the following command in your terminal: 
 
 ```bash
 go install github.com/binalyze/bizip@latest
