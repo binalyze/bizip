@@ -2,12 +2,23 @@ name: Build
 
 on:
   push:
-    tags: '*'
+    branches: [ "main" ]
+    tags: "*"
     
 jobs:
-
-  Build:
+  build:
     runs-on: ubuntu-latest
+    strategy:
+      matrix: 
+        os: [darwin, linux, windows]
+        arch: [386, amd64, arm64]
+        exclude:
+          - os: darwin
+            arch: 386
+          - os: linux
+            arch: arm64
+          - os: windows
+            arch: arm64
     steps:
     - uses: actions/checkout@v3
 
@@ -15,23 +26,34 @@ jobs:
       uses: actions/setup-go@v3
       with:
         go-version: 1.19
-      
-    - name: Build Linux amd64 Binary
-      run: env GOOS=linux GOARCH=amd64 go build -v -o build/bizip_linux_amd64 ./...
 
-    - name: Build Linux arm64 Binary
-      run: env GOOS=linux GOARCH=arm64 go build -v -o build/bizip_linux_arm64 ./...
-  
-    - name: Build Darwin amd64 Binary
-      run: env GOOS=darwin GOARCH=amd64 go build -v -o build/bizip_darwin_amd64 ./...
-      
-    - name: Build Darwin arm64 Binary
-      run: env GOOS=darwin GOARCH=arm64 go build -v -o build/bizip_darwin_arm64 ./...
-      
-    - name: Build Windows amd64 Binary
-      run: env GOOS=windows GOARCH=amd64 go build -v -o build/bizip_windows_amd64.exe ./...
-
+    - name: Build
+      run: env GOOS=${{ matrix.os }} GOARCH=${{ matrix.arch }} go build -v -o build/bizip_${{ matrix.os }}_${{ matrix.arch }} ./...
+        
     - uses: actions/upload-artifact@v3
       with:
-        name: bizip
-        path: build/
+        name: binaries
+        path: build
+
+  calculate_checksums:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+    - uses: actions/checkout@v3
+      
+    - uses: actions/download-artifact@v3
+      with:
+          name: binaries
+          path: build
+      
+    - name: Calculate Checksums
+      run: |
+        mkdir checksums
+        md5sum build/* > checksums/md5_checksums.txt
+        sha1sum build/* > checksums/sha1_checksums.txt
+        sha256sum build/* > checksums/sha256_checksums.txt
+    
+    - uses: actions/upload-artifact@v3
+      with:
+        name: checksums
+        path: checksums
