@@ -22,7 +22,7 @@ jobs:
           - os: windows-latest
             arch: arm64
     runs-on: ${{ matrix.os }}
-    name: Build Go ${{ matrix.go-version }} ${{ matrix. os }}
+    name: Build Go ${{ matrix.go-version }} ${{ matrix.os }} ${{ matrix.arch }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
