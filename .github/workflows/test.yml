@@ -54,5 +54,5 @@ jobs:
 
       - name: Test
         run: |
-        go env
-        go test -count 1 -failfast -v ./...
+          go env
+          go test -count 1 -failfast -v ./...
