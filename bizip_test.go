@@ -1,4 +1,4 @@
-package main
+package bizip
 
 import (
 	"bytes"
@@ -12,6 +12,44 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestNewConfig(t *testing.T) {
+	tests := []struct {
+		name      string
+		input     string
+		output    string
+		log       LogFunc
+		expectErr bool
+	}{
+		{
+			name:      "without_input",
+			input:     "",
+			expectErr: true,
+		},
+		{
+			name:      "without_output",
+			input:     "test_file_*.zip",
+			output:    "",
+			expectErr: true,
+		},
+		{
+			name:      "with_nil_log_func",
+			input:     "test_file_*.zip",
+			output:    "test_file",
+			log:       nil,
+			expectErr: false,
+		},
+	}
+	for _, test := range tests {
+		cfg, err := NewConfig(test.input, test.output, "", false, nil, nil)
+		if test.expectErr {
+			require.Error(t, err)
+			continue
+		}
+		require.NoError(t, err)
+		require.NotNil(t, cfg.Log)
+	}
+}
+
 func TestUnzipInputFiles(t *testing.T) {
 	dir := t.TempDir()
 
@@ -23,13 +61,14 @@ func TestUnzipInputFiles(t *testing.T) {
 
 	output := filepath.Join(dir, "test_file")
 
-	cfg := config{
+	cfg := Config{
 		Input:  filepath.Join(dir, "test_file*.zip"),
 		Output: output,
 		Unzip:  true,
+		Log:    func(_ string, _ ...interface{}) {},
 	}
 
-	err = unzipInputFiles(cfg)
+	err = UnzipInputFiles(cfg)
 	require.NoError(t, err)
 
 	data, err := os.ReadFile(output)
@@ -211,22 +250,24 @@ func TestCreateOutputWriter(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		cfg      config
+		cfg      Config
 		expected []byte
 	}{
 		{
 			name: "without_unzip",
-			cfg: config{
+			cfg: Config{
 				Output: filepath.Join(dir, "test_file"),
 				Unzip:  false,
+				Log:    func(_ string, _ ...interface{}) {},
 			},
 			expected: []byte("test data"),
 		},
 		{
 			name: "with_unzip",
-			cfg: config{
+			cfg: Config{
 				Output: filepath.Join(dir, "test_file.zip"),
 				Unzip:  true,
+				Log:    func(_ string, _ ...interface{}) {},
 			},
 			expected: []byte("test_data"),
 		},
