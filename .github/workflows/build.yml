@@ -27,7 +27,7 @@ jobs:
           - os: [windows-latest, windows]
             arch: arm64
     runs-on: ${{ matrix.os[0] }}
-    name: Build go${{ matrix.go-version }}_${{ matrix.os[1] }}_${{ matrix.arch }}
+    name: Build (go${{ matrix.go-version }}, ${{ matrix.os[1] }}, ${{ matrix.arch }})
     defaults:
       run:
         shell: bash
