@@ -32,11 +32,16 @@ jobs:
     needs: govulncheck
     strategy:
       matrix:
-        os: [macOS-latest, ubuntu-latest, windows-latest]
+        os:
+          [
+            [macOS-latest, darwin],
+            [ubuntu-latest, linux],
+            [windows-latest, windows],
+          ]
         arch: [amd64]
         go-version: ["1.20"]
-    runs-on: ${{ matrix.os }}
-    name: Test Go ${{ matrix.go-version }} ${{ matrix. os }}
+    runs-on: ${{ matrix.os[0] }}
+    name: Test Go ${{ matrix.go-version }} ${{ matrix.os[1] }}
     defaults:
       run:
         shell: bash
@@ -56,4 +61,4 @@ jobs:
         run: golangci-lint run -v ./...
 
       - name: Test
-        run: go test -count 1 -failfast -v ./...
+        run: GOOS=${{ matrix.os[1] }} GOARCH=${{ matrix.arch }} go test -v -count 1 -failfast ./...
