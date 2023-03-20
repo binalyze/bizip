@@ -23,6 +23,9 @@ jobs:
             arch: arm64
     runs-on: ${{ matrix.os }}
     name: Build Go ${{ matrix.go-version }} ${{ matrix.os }} ${{ matrix.arch }}
+    defaults:
+      run:
+        shell: bash
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -43,6 +46,10 @@ jobs:
   calculate_checksums:
     needs: build
     runs-on: ubuntu-latest
+    name: Calculate Checksums
+    defaults:
+      run:
+        shell: bash
     steps:
       - name: Checkout
         uses: actions/checkout@v3
