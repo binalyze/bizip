@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -76,11 +77,11 @@ func parseFlags() (config, error) {
 	}
 
 	if len(cfg.input) == 0 {
-		return cfg, fmt.Errorf("input flag is required")
+		return cfg, errors.New("input flag is required")
 	}
 
 	if len(cfg.output) == 0 {
-		return cfg, fmt.Errorf("output flag is required")
+		return cfg, errors.New("output flag is required")
 	}
 	if !cfg.unzip && !strings.HasSuffix(cfg.output, zipFileExt) {
 		cfg.output += zipFileExt
