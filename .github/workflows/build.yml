@@ -20,14 +20,14 @@ jobs:
         arch: [arm64, amd64, 386]
         go-version: ["1.20"]
         exclude:
-          - os: macOS-latest
+          - os: [macOS-latest, darwin]
             arch: 386
-          - os: ubuntu-latest
+          - os: [ubuntu-latest, linux]
             arch: arm64
-          - os: windows-latest
+          - os: [windows-latest, windows]
             arch: arm64
     runs-on: ${{ matrix.os[0] }}
-    name: Build Go ${{ matrix.go-version }} ${{ matrix.os[1] }} ${{ matrix.arch }}
+    name: Build go${{ matrix.go-version }}_${{ matrix.os[1] }}_${{ matrix.arch }}
     defaults:
       run:
         shell: bash
@@ -41,7 +41,7 @@ jobs:
           go-version: ${{ matrix.go-version }}
 
       - name: Build
-        run: GOOS=${{ matrix.os[1] GOARCH=${{ matrix.arch }} go build -o build/bizip_${{ matrix.os[1] }}_${{ matrix.arch }} -v ./...
+        run: GOOS=${{ matrix.os[1] }} GOARCH=${{ matrix.arch }} go build -v -o build/bizip_${{ matrix.os[1] }}_${{ matrix.arch }} ./...
 
       - uses: actions/upload-artifact@v3
         with:
