@@ -3,17 +3,17 @@ name: Build
 on:
   push:
     branches: [main]
-    tags: '*'
+    tags: ["*"]
   pull_request:
     branches: [main]
-    
+
 jobs:
   build:
     strategy:
       matrix:
         os: [macOS-latest, ubuntu-latest, windows-latest]
         arch: [arm64, amd64, 386]
-        go-version: ['1.20']
+        go-version: ["1.20"]
         exclude:
           - os: darwin
             arch: 386
@@ -33,24 +33,26 @@ jobs:
           go-version: ${{ matrix.go-version }}
 
       - name: Build
-        run: GOARCH=${{ matrix.arch }} go build -v -o build/bizip_${{ matrix.os }}_${{ matrix.arch }} ./...
-        
+        run: GOARCH=${{ matrix.arch }} go build -o build/bizip_${{ matrix.os }}_${{ matrix.arch }} -v ./...
+
       - uses: actions/upload-artifact@v3
         with:
           name: binaries
           path: build
 
   calculate_checksums:
-    runs-on: ubuntu-latest
     needs: build
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      
-      - uses: actions/download-artifact@v3
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Download Binaries
+        uses: actions/download-artifact@v3
         with:
           name: binaries
           path: build
-      
+
       - name: Calculate Checksums
         run: |
           mkdir checksums
@@ -58,8 +60,9 @@ jobs:
           md5sum * > ../checksums/md5_checksums.txt
           sha1sum * > ../checksums/sha1_checksums.txt
           sha256sum * > ../checksums/sha256_checksums.txt
-    
-    - uses: actions/upload-artifact@v3
-      with:
-        name: checksums
-        path: checksums
+
+      - name: Upload Checksums
+        uses: actions/upload-artifact@v3
+        with:
+          name: checksums
+          path: checksums
