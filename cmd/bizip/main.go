@@ -65,7 +65,11 @@ func parseFlags() (config, error) {
 		fmt.Println("flags:")
 		flag.PrintDefaults()
 		fmt.Println("example usage:")
-		fmt.Println("  ./bizip --encrypted --input ./data/input.*.zip --output ./data/output --unzip")
+		fmt.Println("  with encryption:")
+		fmt.Println("        export PASSWORD=\"your_password\"")
+		fmt.Println("        ./bizip --encrypted --input ./data/input.*.zip --output ./data/output --unzip")
+		fmt.Println("  without encryption:")
+		fmt.Println("        ./bizip --input ./data/input.*.zip --output ./data/output --unzip")
 	}
 
 	flag.Parse()
