@@ -64,7 +64,7 @@ func UnzipInputFiles(cfg Config) error {
 		return err
 	}
 	totalInputCount := len(inputs)
-	cfg.Log("%d input zip files found", totalInputCount)
+	cfg.Log("%d input zip files found.", totalInputCount)
 
 	err = validateInputZipFiles(inputs)
 	if err != nil {
@@ -87,6 +87,7 @@ func UnzipInputFiles(cfg Config) error {
 
 	multiWriter := io.MultiWriter(outputWriter, md5Hash, sha1Hash, sha256Hash)
 
+	cfg.Log("Processing...")
 	var unzippedInputCount int
 	for _, input := range inputs {
 		err := unzipInputToOutput(input, cfg.Password, multiWriter)
@@ -96,7 +97,7 @@ func UnzipInputFiles(cfg Config) error {
 		}
 
 		unzippedInputCount++
-		cfg.Log("%d/%d of input zip file processed", unzippedInputCount, totalInputCount)
+		cfg.Log("%d/%d of input zip file processed.", unzippedInputCount, totalInputCount)
 
 		if cfg.Progress != nil {
 			cfg.Progress(unzippedInputCount, totalInputCount)
@@ -107,7 +108,7 @@ func UnzipInputFiles(cfg Config) error {
 	if err != nil {
 		return fmt.Errorf("failed to close output file. error: %w", err)
 	}
-	cfg.Log("%s created", cfg.Output)
+	cfg.Log("Process completed, %s created.", cfg.Output)
 
 	cfg.Log("Hashes:")
 	cfg.Log("md5: '%s'", hashToString(md5Hash))
