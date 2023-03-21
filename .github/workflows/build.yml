@@ -2,58 +2,78 @@ name: Build
 
 on:
   push:
-    branches: [ "main" ]
-    tags: "*"
-    
+    branches: [main]
+    tags: ["*"]
+
+env:
+  CGO_ENABLED: 0
+
 jobs:
   build:
-    runs-on: ubuntu-latest
     strategy:
-      matrix: 
-        os: [darwin, linux, windows]
-        arch: [386, amd64, arm64]
+      matrix:
+        os:
+          [
+            [macOS-latest, darwin],
+            [ubuntu-latest, linux],
+            [windows-latest, windows],
+          ]
+        arch: [arm64, amd64, 386]
+        go-version: ["1.20"]
         exclude:
-          - os: darwin
+          - os: [macOS-latest, darwin]
             arch: 386
-          - os: linux
+          - os: [windows-latest, windows]
             arch: arm64
-          - os: windows
-            arch: arm64
+    runs-on: ${{ matrix.os[0] }}
+    name: Build (go${{ matrix.go-version }}, ${{ matrix.os[1] }}, ${{ matrix.arch }})
+    defaults:
+      run:
+        shell: bash
     steps:
-    - uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v3
 
-    - name: Set up Go
-      uses: actions/setup-go@v3
-      with:
-        go-version: 1.19
+      - name: Set up Go ${{ matrix.go-version }}
+        uses: actions/setup-go@v3
+        with:
+          go-version: ${{ matrix.go-version }}
 
-    - name: Build
-      run: env GOOS=${{ matrix.os }} GOARCH=${{ matrix.arch }} go build -v -o build/bizip_${{ matrix.os }}_${{ matrix.arch }} ./...
-        
-    - uses: actions/upload-artifact@v3
-      with:
-        name: binaries
-        path: build
+      - name: Build
+        run: GOOS=${{ matrix.os[1] }} GOARCH=${{ matrix.arch }} go build -v -o build/bizip_${{ matrix.os[1] }}_${{ matrix.arch }} ./cmd/bizip
 
-  calculate_checksums:
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-    - uses: actions/checkout@v3
-      
-    - uses: actions/download-artifact@v3
-      with:
+      - uses: actions/upload-artifact@v3
+        with:
           name: binaries
           path: build
-      
-    - name: Calculate Checksums
-      run: |
-        mkdir checksums
-        md5sum build/* > checksums/md5_checksums.txt
-        sha1sum build/* > checksums/sha1_checksums.txt
-        sha256sum build/* > checksums/sha256_checksums.txt
-    
-    - uses: actions/upload-artifact@v3
-      with:
-        name: checksums
-        path: checksums
+
+  calculate_checksums:
+    needs: build
+    runs-on: ubuntu-latest
+    name: Calculate Checksums
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Download Binaries
+        uses: actions/download-artifact@v3
+        with:
+          name: binaries
+          path: build
+
+      - name: Calculate Checksums
+        run: |
+          mkdir checksums
+          cd build
+          md5sum * > ../checksums/md5_checksums.txt
+          sha1sum * > ../checksums/sha1_checksums.txt
+          sha256sum * > ../checksums/sha256_checksums.txt
+
+      - name: Upload Checksums
+        uses: actions/upload-artifact@v3
+        with:
+          name: checksums
+          path: checksums

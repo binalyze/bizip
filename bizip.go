@@ -1,14 +1,14 @@
-package main
+package bizip
 
 import (
 	"crypto/md5"
 	"crypto/sha1"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"hash"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -17,13 +17,52 @@ import (
 	"github.com/alexmullins/zip"
 )
 
-func unzipInputFiles(cfg config) error {
+const zipFileExt = ".zip"
+
+type LogFunc func(format string, v ...interface{})
+type ProgressFunc func(unzipped, total int)
+
+type Config struct {
+	Input    string
+	Output   string
+	Password string
+	Unzip    bool
+	Log      LogFunc
+	Progress ProgressFunc
+}
+
+func NewConfig(input, output, password string, unzip bool, log LogFunc, progress ProgressFunc) (Config, error) {
+	cfg := Config{
+		Input:    input,
+		Output:   output,
+		Password: password,
+		Unzip:    unzip,
+		Log:      log,
+		Progress: progress,
+	}
+
+	if len(cfg.Input) == 0 {
+		return cfg, errors.New("input is required")
+	}
+
+	if len(cfg.Output) == 0 {
+		return cfg, errors.New("output is required")
+	}
+
+	if cfg.Log == nil {
+		cfg.Log = func(_ string, _ ...interface{}) {}
+	}
+
+	return cfg, nil
+}
+
+func UnzipInputFiles(cfg Config) error {
 	inputs, err := findInputZipFiles(cfg.Input)
 	if err != nil {
 		return err
 	}
 	totalInputCount := len(inputs)
-	log.Printf("%d input zip files found", totalInputCount)
+	cfg.Log("%d input zip files found.", totalInputCount)
 
 	err = validateInputZipFiles(inputs)
 	if err != nil {
@@ -46,6 +85,7 @@ func unzipInputFiles(cfg config) error {
 
 	multiWriter := io.MultiWriter(outputWriter, md5Hash, sha1Hash, sha256Hash)
 
+	cfg.Log("Processing...")
 	var unzippedInputCount int
 	for _, input := range inputs {
 		err := unzipInputToOutput(input, cfg.Password, multiWriter)
@@ -55,19 +95,23 @@ func unzipInputFiles(cfg config) error {
 		}
 
 		unzippedInputCount++
-		log.Printf("%d/%d of input zip file processed", unzippedInputCount, totalInputCount)
+		cfg.Log("%d/%d of input zip file processed.", unzippedInputCount, totalInputCount)
+
+		if cfg.Progress != nil {
+			cfg.Progress(unzippedInputCount, totalInputCount)
+		}
 	}
 
 	err = closeOutputWriter()
 	if err != nil {
 		return fmt.Errorf("failed to close output file. error: %w", err)
 	}
-	log.Printf("%s created", cfg.Output)
+	cfg.Log("Process completed, %s created.", cfg.Output)
 
-	log.Printf("Hashes:")
-	log.Printf("md5: '%s'", hashToString(md5Hash))
-	log.Printf("sha1: '%s'", hashToString(sha1Hash))
-	log.Printf("sha256: '%s'", hashToString(sha256Hash))
+	cfg.Log("Hashes:")
+	cfg.Log("md5: '%s'", hashToString(md5Hash))
+	cfg.Log("sha1: '%s'", hashToString(sha1Hash))
+	cfg.Log("sha256: '%s'", hashToString(sha256Hash))
 
 	return nil
 }
@@ -115,7 +159,7 @@ func validateInputZipFiles(inputs []string) error {
 		}
 
 		if ext != zipFileExt {
-			return fmt.Errorf("input zip file doesn't have '.zip' extension. path: '%s'", input)
+			return fmt.Errorf("input zip file doesn't have '%s' extension. path: '%s'", zipFileExt, input)
 		}
 	}
 
@@ -137,7 +181,7 @@ func splitInputZipFilename(input string) (string, string, string, error) {
 	return name, index, ext, nil
 }
 
-func createOutputWriter(cfg config, outputName string) (io.Writer, func() error, error) {
+func createOutputWriter(cfg Config, outputName string) (io.Writer, func() error, error) {
 	outputFile, err := os.OpenFile(cfg.Output, os.O_EXCL|os.O_CREATE|os.O_WRONLY, os.ModePerm)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create output file. path: '%s' error: %w", cfg.Output, err)

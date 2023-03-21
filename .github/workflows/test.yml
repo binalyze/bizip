@@ -2,20 +2,63 @@ name: Test
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [main]
   pull_request:
-    branches: [ "main" ]
+    branches: [main]
 
 jobs:
-  test:
+  govulncheck:
     runs-on: ubuntu-latest
+    name: Security (govulncheck)
+    defaults:
+      run:
+        shell: bash
     steps:
-    - uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v3
 
-    - name: Set up Go
-      uses: actions/setup-go@v3
-      with:
-        go-version: 1.19
+      - name: Setup Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: "1.20"
 
-    - name: Test
-      run: go test -v ./...
+      - name: Install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@latest
+
+      - name: Run govulncheck
+        run: govulncheck -v ./...
+
+  test:
+    needs: govulncheck
+    strategy:
+      matrix:
+        os:
+          [
+            [macOS-latest, darwin],
+            [ubuntu-latest, linux],
+            [windows-latest, windows],
+          ]
+        arch: [amd64]
+        go-version: ["1.20"]
+    runs-on: ${{ matrix.os[0] }}
+    name: Test (go${{ matrix.go-version }}, ${{ matrix.os[1] }}, ${{ matrix.arch }})
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set up Go ${{ matrix.go-version }}
+        uses: actions/setup-go@v3
+        with:
+          go-version: ${{ matrix.go-version }}
+
+      - name: Install golangci-lint
+        run: go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+
+      - name: Run golangci-lint
+        run: golangci-lint run -v ./...
+
+      - name: Test
+        run: GOOS=${{ matrix.os[1] }} GOARCH=${{ matrix.arch }} go test -v -count 1 -failfast ./...
