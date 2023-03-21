@@ -89,6 +89,9 @@ func parseFlags() (config, error) {
 
 	if *encrypted {
 		cfg.password = os.Getenv(passwordEnv)
+		if len(cfg.password) == 0 {
+			return cfg, fmt.Errorf("password is required when the input zip files are encrypted")
+		}
 	}
 
 	return cfg, nil
