@@ -7,6 +7,9 @@ on:
   pull_request:
     branches: [main]
 
+env:
+  CGO_ENABLED: 0
+
 jobs:
   build:
     strategy:
@@ -22,8 +25,6 @@ jobs:
         exclude:
           - os: [macOS-latest, darwin]
             arch: 386
-          - os: [ubuntu-latest, linux]
-            arch: arm64
           - os: [windows-latest, windows]
             arch: arm64
     runs-on: ${{ matrix.os[0] }}
@@ -41,7 +42,7 @@ jobs:
           go-version: ${{ matrix.go-version }}
 
       - name: Build
-        run: GOOS=${{ matrix.os[1] }} GOARCH=${{ matrix.arch }} go build -v -o build/bizip_${{ matrix.os[1] }}_${{ matrix.arch }} ./cmd/bizip
+        run: CGO_ENABLED=$CGO_ENABLED GOOS=${{ matrix.os[1] }} GOARCH=${{ matrix.arch }} go build -v -o build/bizip_${{ matrix.os[1] }}_${{ matrix.arch }} ./cmd/bizip
 
       - uses: actions/upload-artifact@v3
         with:
