@@ -43,6 +43,6 @@ To view a detailed help message, run the following command in your terminal:
 ./bizip --help
 ```
 
-# Lincese
+# License
 
 bizip is licensed under the [Apache License](LICENSE).
