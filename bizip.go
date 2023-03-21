@@ -17,9 +17,7 @@ import (
 	"github.com/alexmullins/zip"
 )
 
-const (
-	zipFileExt = ".zip"
-)
+const zipFileExt = ".zip"
 
 type LogFunc func(format string, v ...interface{})
 type ProgressFunc func(unzipped, total int)
