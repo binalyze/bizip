@@ -1,12 +1,15 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"flag"
 	"fmt"
 	"log"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 
 	"github.com/binalyze/bizip"
 )
@@ -33,19 +36,18 @@ func main() {
 		log.Fatal(err)
 	}
 
-	bizipCfg, err := bizip.NewConfig(
-		cfg.input,
-		cfg.output,
-		cfg.password,
-		cfg.unzip,
-		log.Printf,
-		nil,
-	)
-	if err != nil {
-		log.Fatal(err)
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	bz := &bizip.Bizip{
+		Input:    cfg.input,
+		Output:   cfg.output,
+		Password: cfg.password,
+		Unzip:    cfg.unzip,
+		Log:      log.Printf,
 	}
 
-	err = bizip.UnzipInputFiles(bizipCfg)
+	err = bz.UnzipFiles(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -83,7 +85,6 @@ func parseFlags() (config, error) {
 	if len(cfg.input) == 0 {
 		return cfg, errors.New("input flag is required")
 	}
-
 	if len(cfg.output) == 0 {
 		return cfg, errors.New("output flag is required")
 	}
@@ -93,10 +94,9 @@ func parseFlags() (config, error) {
 
 	if *encrypted {
 		cfg.password = os.Getenv(passwordEnv)
-		if len(cfg.password) == 0 {
+		if cfg.password == "" {
 			return cfg, fmt.Errorf("password is required when the input zip files are encrypted")
 		}
 	}
-
 	return cfg, nil
 }
