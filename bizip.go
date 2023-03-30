@@ -280,19 +280,19 @@ func validateInputZipFiles(inputs []string) error {
 	return nil
 }
 
-func splitInputZipFilename(input string) (string, string, string, error) {
+func splitInputZipFilename(input string) (name string, index string, ext string, err error) {
 	base := filepath.Base(input)
 
 	parts := strings.Split(base, ".")
-	if len(parts) != 3 {
-		return "", "", "", fmt.Errorf("input zip file has an invalid file name. path: '%s'", input)
+	if len(parts) >= 3 {
+		name = strings.Join(parts[:len(parts)-2], ".")
+		index = parts[len(parts)-2]
+		ext = "." + parts[len(parts)-1]
 	}
-
-	name := parts[0]
-	index := parts[1]
-	ext := "." + parts[2]
-
-	return name, index, ext, nil
+	if name == "" || index == "" || ext == "" {
+		err = fmt.Errorf("input zip file has an invalid file name. path: '%s'", input)
+	}
+	return
 }
 
 func hashToString(algorithm hash.Hash) string {
