@@ -1,7 +1,9 @@
 package bizip
 
 import (
+	"bufio"
 	"bytes"
+	"context"
 	"crypto/md5"
 	"io"
 	"os"
@@ -9,48 +11,11 @@ import (
 	"testing"
 
 	"github.com/alexmullins/zip"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestNewConfig(t *testing.T) {
-	tests := []struct {
-		name      string
-		input     string
-		output    string
-		log       LogFunc
-		expectErr bool
-	}{
-		{
-			name:      "without_input",
-			input:     "",
-			expectErr: true,
-		},
-		{
-			name:      "without_output",
-			input:     "test_file_*.zip",
-			output:    "",
-			expectErr: true,
-		},
-		{
-			name:      "with_nil_log_func",
-			input:     "test_file_*.zip",
-			output:    "test_file",
-			log:       nil,
-			expectErr: false,
-		},
-	}
-	for _, test := range tests {
-		cfg, err := NewConfig(test.input, test.output, "", false, nil, nil)
-		if test.expectErr {
-			require.Error(t, err)
-			continue
-		}
-		require.NoError(t, err)
-		require.NotNil(t, cfg.Log)
-	}
-}
-
-func TestUnzipInputFiles(t *testing.T) {
+func TestBizip_UnzipFiles(t *testing.T) {
 	dir := t.TempDir()
 
 	_, err := createTestZipFile(dir, "test_file.1.zip", "test_file", "", []byte("test_"))
@@ -61,14 +26,14 @@ func TestUnzipInputFiles(t *testing.T) {
 
 	output := filepath.Join(dir, "test_file")
 
-	cfg := Config{
+	bz := &Bizip{
 		Input:  filepath.Join(dir, "test_file*.zip"),
 		Output: output,
 		Unzip:  true,
 		Log:    func(_ string, _ ...interface{}) {},
 	}
 
-	err = UnzipInputFiles(cfg)
+	err = bz.UnzipFiles(context.Background())
 	require.NoError(t, err)
 
 	data, err := os.ReadFile(output)
@@ -107,13 +72,15 @@ func TestFindInputZipFiles(t *testing.T) {
 			expectErr: true,
 		},
 	}
-	for _, test := range tests {
-		actual, err := findInputZipFiles(test.pattern)
-		if test.expectErr {
-			require.Error(t, err)
-			continue
-		}
-		require.Equal(t, test.expected, actual)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual, err := findInputZipFiles(tt.pattern)
+			if tt.expectErr {
+				require.Error(t, err)
+				return
+			}
+			require.Equal(t, tt.expected, actual)
+		})
 	}
 }
 
@@ -200,13 +167,15 @@ func TestValidateInputZipFiles(t *testing.T) {
 			expectErr: true,
 		},
 	}
-	for _, test := range tests {
-		err := validateInputZipFiles(test.inputs)
-		if test.expectErr {
-			require.Error(t, err)
-			continue
-		}
-		require.NoError(t, err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateInputZipFiles(tt.inputs)
+			if tt.expectErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+		})
 	}
 }
 
@@ -233,15 +202,17 @@ func TestSplitInputZipFilename(t *testing.T) {
 			expectErr: true,
 		},
 	}
-	for _, test := range tests {
-		name, index, ext, err := splitInputZipFilename(test.filename)
-		if test.expectErr {
-			require.Error(t, err)
-			continue
-		}
-		require.Equal(t, test.expectedName, name)
-		require.Equal(t, test.expectedIndex, index)
-		require.Equal(t, test.expectedExt, ext)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			name, index, ext, err := splitInputZipFilename(tt.filename)
+			if tt.expectErr {
+				require.Error(t, err)
+				return
+			}
+			require.Equal(t, tt.expectedName, name)
+			require.Equal(t, tt.expectedIndex, index)
+			require.Equal(t, tt.expectedExt, ext)
+		})
 	}
 }
 
@@ -250,12 +221,12 @@ func TestCreateOutputWriter(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		cfg      Config
+		bz       Bizip
 		expected []byte
 	}{
 		{
 			name: "without_unzip",
-			cfg: Config{
+			bz: Bizip{
 				Output: filepath.Join(dir, "test_file"),
 				Unzip:  false,
 				Log:    func(_ string, _ ...interface{}) {},
@@ -264,7 +235,7 @@ func TestCreateOutputWriter(t *testing.T) {
 		},
 		{
 			name: "with_unzip",
-			cfg: Config{
+			bz: Bizip{
 				Output: filepath.Join(dir, "test_file.zip"),
 				Unzip:  true,
 				Log:    func(_ string, _ ...interface{}) {},
@@ -272,33 +243,33 @@ func TestCreateOutputWriter(t *testing.T) {
 			expected: []byte("test_data"),
 		},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			outputWriter, closeOutputWriter, err := createOutputWriter(test.cfg, "test_file")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			outputWriter, closeOutputWriter, err := tt.bz.createOutputWriter("test_file")
 			require.NoError(t, err)
 
-			_, err = outputWriter.Write(test.expected)
-			require.NoError(t, err)
+			_, err = outputWriter.Write(tt.expected)
+			assert.NoError(t, err)
 
 			err = closeOutputWriter()
 			require.NoError(t, err)
 
-			if test.cfg.Unzip {
-				actual, err := os.ReadFile(test.cfg.Output)
+			if tt.bz.Unzip {
+				actual, err := os.ReadFile(tt.bz.Output)
 				require.NoError(t, err)
-				require.Equal(t, test.expected, actual)
+				require.Equal(t, tt.expected, actual)
 				return
 			}
 
-			outputFile, err := os.Open(test.cfg.Output)
+			outputFile, err := os.Open(tt.bz.Output)
 			require.NoError(t, err)
 
-			unzipReader, err := createUnzipReader(outputFile, "")
-			require.NoError(t, err)
+			unzipReader, err := tt.bz.createUnzipReader(outputFile)
+			assert.NoError(t, err)
 
 			actual, err := io.ReadAll(unzipReader)
-			require.NoError(t, err)
-			require.Equal(t, test.expected, actual)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expected, actual)
 
 			err = outputFile.Close()
 			require.NoError(t, err)
@@ -307,8 +278,6 @@ func TestCreateOutputWriter(t *testing.T) {
 }
 
 func TestUnzipInputToOutput(t *testing.T) {
-	dir := t.TempDir()
-
 	tests := []struct {
 		name     string
 		expected []byte
@@ -327,11 +296,18 @@ func TestUnzipInputToOutput(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			dir := t.TempDir()
 			input, err := createTestZipFile(dir, "test_file_1.zip", "test_file", test.password, test.expected)
 			require.NoError(t, err)
 
-			output := &bytes.Buffer{}
-			err = unzipInputToOutput(input, test.password, output)
+			output := bytes.NewBuffer(nil)
+			bz := &Bizip{
+				Password: test.password,
+				rdbuf:    bufio.NewReader(nil),
+				wrbuf:    bufio.NewWriter(nil),
+			}
+
+			err = bz.unzipInputToOutput(input, output)
 			require.NoError(t, err)
 			actual := output.Bytes()
 			require.Equal(t, test.expected, actual)
@@ -361,39 +337,29 @@ func createTestZipFile(dir, name, entry, password string, data []byte) (string, 
 
 	zipEntry, err := createZipEntry(zipWriter, entry, password)
 	if err != nil {
+		_ = zipFile.Close()
 		return "", err
 	}
 
 	_, err = zipEntry.Write(data)
 	if err != nil {
+		_ = zipFile.Close()
 		return "", err
 	}
 
 	err = zipWriter.Close()
 	if err != nil {
+		_ = zipFile.Close()
 		return "", err
 	}
-
-	err = zipFile.Close()
-	if err != nil {
-		return "", err
-	}
-
-	return zipFile.Name(), nil
+	return zipFile.Name(), zipFile.Close()
 }
 
 func createTestFile(dir, name string) (string, error) {
-	path := filepath.Join(dir, name)
-
-	file, err := os.Create(path)
+	f, err := os.Create(filepath.Join(dir, name))
 	if err != nil {
 		return "", err
 	}
-
-	err = file.Close()
-	if err != nil {
-		return "", err
-	}
-
-	return file.Name(), nil
+	_ = f.Close()
+	return f.Name(), nil
 }
