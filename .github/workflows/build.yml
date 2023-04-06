@@ -40,7 +40,10 @@ jobs:
           go-version: ${{ matrix.go-version }}
 
       - name: Build
-        run: GOOS=${{ matrix.os[1] }} GOARCH=${{ matrix.arch }} go build -v -o build/bizip_${{ matrix.os[1] }}_${{ matrix.arch }} ./cmd/bizip
+        run: |
+          output=build/bizip_${{ matrix.os[1] }}_${{ matrix.arch }}
+          [ ${{ matrix.os[1] }} = windows ] && output+=.exe
+          GOOS=${{ matrix.os[1] }} GOARCH=${{ matrix.arch }} go build -v -o $output ./cmd/bizip
 
       - uses: actions/upload-artifact@v3
         with:
