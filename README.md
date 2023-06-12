@@ -34,13 +34,25 @@ export PASSWORD="your_password"
 cmd.exe:
 ```
 set PASSWORD=your_password
-bizip.exe --unzip --encrypted --input "inputs/image*.zip" --output output_file_path
+bizip.exe --encrypted --unzip --input "inputs\image*.zip" --output output_file_path
 ```
 
 PowerShell:
 ```powershell
 $env:PASSWORD = 'your_password'
-.\bizip.exe --unzip --encrypted --input "inputs/image*.zip" --output output_file_path
+.\bizip.exe --encrypted --unzip --input "inputs\image*.zip" --output output_file_path
+```
+
+## Without Encryption (Windows):
+
+cmd.exe:
+```
+bizip.exe --unzip --input "inputs\image*.zip" --output output_file_path
+```
+
+PowerShell:
+```powershell
+.\bizip.exe --unzip --input "inputs\image*.zip" --output output_file_path
 ```
 
 ## Flags
