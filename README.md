@@ -61,9 +61,9 @@ PowerShell:
 ## Flags
 
 - `--encrypted`: If this flag is set, the input zip files are expected to be encrypted zip files. The password for decryption should be stored in the `PASSWORD` environment variable.
+- `--unzip`: If this flag is set, the output file will not be a zip file. If this flag is not set and the input zip files are encrypted, the output file will also be an encrypted zip file.
 - `--input`: The input zip files should be specified specified using the glob pattern. For example, "inputs/image*.zip" will match all files under inputs folder having image prefix with .zip file extension. Note that, matched files are sorted before processing.
 - `--output`: The output file path.
-- `--unzip`: If this flag is set, the output file will not be a zip file. If this flag is not set and the input zip files are encrypted, the output file will also be an encrypted zip file.
 
 ## Help
 
